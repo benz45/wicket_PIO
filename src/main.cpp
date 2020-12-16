@@ -3,16 +3,17 @@
 #include <ESP8266WiFi.h>
 #include <Servo.h>
 
- #define WIFI_SSID "XXX"
-#define WIFI_PASSWORD "XXX"
-#define FIREBASE_HOST "XXX"
-#define FIREBASE_AUTH "XXX"
+#define WIFI_SSID "MI8"
+#define WIFI_PASSWORD "88888888"
+#define FIREBASE_HOST "rn-wicket.firebaseio.com"
+#define FIREBASE_AUTH "Bfe2xLJetFuxjMvuuXTzemAZJbbHvulqbXZlnVO1"
 
 Servo myservo;
 int pot = 180;
 int val;
 int numConnect = 0;
-String productKey = "XXX";
+int degree = 0;
+String productKey = "F80WI7";
 String statusPath = "/door/datas/" + productKey + "/status";
 String degreePath = "/door/status/" + productKey + "/degree";
 String degreePathDatas = "/door/datas/" + productKey + "/degree";
@@ -47,8 +48,8 @@ void serRotate(byte rotateValue)
     }
   }
 
-  Serial.println(currentRotate);
   Firebase.setInt(degreePath, currentRotate);
+  delay(500);
   Firebase.setInt(degreePathDatas, currentRotate);
   delay(500);
 }
@@ -60,11 +61,11 @@ void setup()
 
   // Servo setup
   myservo.attach(D6);
-  myservo.write(180);
+  // myservo.write(180);
 
   //Relay setup
   pinMode(D7, OUTPUT);
-  digitalWrite(D7, LOW);
+  // digitalWrite(D7, LOW);
 
   Serial.println(WiFi.localIP());
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
@@ -106,13 +107,13 @@ void loop()
     {
       // Set number loop connection.
       Firebase.setInt("connections/states/" + productKey + "/state", numConnect);
-      delay(1000);
+      delay(500);
 
       // Set arduinoConnection online.
       Firebase.setBool(doorPath, true);
-      delay(1000);
+      delay(500);
       Firebase.setBool(connectionPath, true);
-      delay(1000);
+      delay(500);
 
       // Check status on door.
       if (Firebase.getBool(statusPath) == true)
@@ -120,12 +121,12 @@ void loop()
         serRotate(0);
       }
       // Check status off door.
-      else if (Firebase.getBool(statusPath) == false)
+      if (Firebase.getBool(statusPath) == false)
       {
         serRotate(170);
       }
       numConnect++;
-      delay(2000);
+      delay(1000);
     }
   }
 }
