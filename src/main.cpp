@@ -3,16 +3,13 @@
 #include <ESP8266WiFi.h>
 #include <Servo.h>
 
-#define WIFI_SSID "MI8"
-#define WIFI_PASSWORD "88888888"
-#define FIREBASE_HOST "rn-wicket.firebaseio.com"
-#define FIREBASE_AUTH "Bfe2xLJetFuxjMvuuXTzemAZJbbHvulqbXZlnVO1"
+#define WIFI_SSID "xxx"
+#define WIFI_PASSWORD "xxx"
+#define FIREBASE_HOST "xxx"
+#define FIREBASE_AUTH "xxx"
 
-Servo myservo;
-int pot = 180;
-int val;
 int numConnect = 0;
-int degree = 0;
+Servo myservo;
 String productKey = "F80WI7";
 String statusPath = "/door/datas/" + productKey + "/status";
 String degreePath = "/door/status/" + productKey + "/degree";
@@ -20,52 +17,16 @@ String degreePathDatas = "/door/datas/" + productKey + "/degree";
 String doorPath = "door/datas/" + productKey + "/arduinoConnection";
 String connectionPath = "connections/datas/" + productKey + "/arduinoConnection";
 
-void serRotate(byte rotateValue)
-{
-  byte currentRotate = myservo.read();
-  if (rotateValue > currentRotate)
-  {
-    // Door being off.(false)
-    Serial.println("Door being off.");
-    for (int i = currentRotate; i < rotateValue; i++)
-    {
-      myservo.write(i);
-      delay(15);
-    }
-    delay(300);
-    digitalWrite(D7, HIGH);
-  }
-  else
-  {
-    // Door being on.(true)
-    digitalWrite(D7, LOW);
-    delay(300);
-    Serial.println("Door being on.");
-    for (int i = currentRotate; i > rotateValue; i--)
-    {
-      myservo.write(i);
-      delay(15);
-    }
-  }
-
-  Firebase.setInt(degreePath, currentRotate);
-  delay(500);
-  Firebase.setInt(degreePathDatas, currentRotate);
-  delay(500);
-}
-
 void setup()
 {
   Serial.begin(115200);
-  Serial.setDebugOutput(true);
+  // Serial.setDebugOutput(true);
 
   // Servo setup
   myservo.attach(D6);
-  // myservo.write(180);
 
   //Relay setup
   pinMode(D7, OUTPUT);
-  // digitalWrite(D7, LOW);
 
   Serial.println(WiFi.localIP());
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
@@ -76,6 +37,16 @@ void setup()
     Serial.print(".");
     Serial.print(WiFi.status());
     delay(500);
+    int currentRotate = myservo.read();
+    Serial.println("Door being off.");
+    Serial.println(currentRotate);
+    for (int i = currentRotate; i < 170; i++)
+    {
+      myservo.write(i);
+      delay(15);
+    }
+    delay(300);
+    digitalWrite(D7, HIGH);
   }
 
   Serial.println();
@@ -87,12 +58,14 @@ void setup()
 
 void loop()
 {
+  int currentRotate = myservo.read();
+  bool lastStatus = Firebase.getBool(statusPath);
+
   if (Firebase.failed())
   {
     Firebase.begin(FIREBASE_HOST, FIREBASE_AUTH);
     Serial.println(Firebase.error());
     Serial.println("Connection to firebase failed...");
-    delay(1000);
   }
   else
   {
@@ -107,26 +80,39 @@ void loop()
     {
       // Set number loop connection.
       Firebase.setInt("connections/states/" + productKey + "/state", numConnect);
-      delay(500);
 
       // Set arduinoConnection online.
       Firebase.setBool(doorPath, true);
-      delay(500);
       Firebase.setBool(connectionPath, true);
-      delay(500);
 
-      // Check status on door.
-      if (Firebase.getBool(statusPath) == true)
+      // // Check status on door.
+      if (lastStatus == true && currentRotate > 1)
       {
-        serRotate(0);
+        digitalWrite(D7, LOW);
+        delay(300);
+        for (int i = currentRotate; i > 0; i--)
+        {
+          myservo.write(i);
+          delay(15);
+        }
+        Firebase.setInt(degreePath, currentRotate);
+        Firebase.setInt(degreePathDatas, currentRotate);
       }
       // Check status off door.
-      if (Firebase.getBool(statusPath) == false)
+      if (lastStatus == false && currentRotate < 169)
       {
-        serRotate(170);
+        for (int i = currentRotate; i < 170; i++)
+        {
+          myservo.write(i);
+          delay(15);
+        }
+        delay(300);
+        digitalWrite(D7, HIGH);
+        Firebase.setInt(degreePath, currentRotate);
+        Firebase.setInt(degreePathDatas, currentRotate);
       }
       numConnect++;
-      delay(1000);
+      delay(500);
     }
   }
 }
